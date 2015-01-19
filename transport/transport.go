@@ -16,7 +16,7 @@ import (
 // request in some way.
 type Wrapper struct {
 	// Modify alters the request as needed.
-	Modify func(*http.Request)
+	Modify func(*http.Request) error
 
 	// Base is the base RoundTripper used to make HTTP requests.
 	// If nil, http.DefaultTransport is used.
@@ -35,7 +35,10 @@ func (t *Wrapper) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 
 	req2 := cloneRequest(req) // per RoundTripper contract
-	t.Modify(req2)
+	err := t.Modify(req2)
+	if err != nil {
+		return nil, err
+	}
 	t.setModReq(req, req2)
 	res, err := t.base().RoundTrip(req2)
 	if err != nil {

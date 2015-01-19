@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package transport provides a general-purpose wapper for
+// http.RoundTripper. It implements the pattern of taking a
+// request, modifying a copy, and passing the modified copy to an
+// underlying RoundTripper, including bookkeeping necessary to
+// cancel in-flight requests.
 package transport
 
 import (

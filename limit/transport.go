@@ -7,6 +7,7 @@ the concurrency of client HTTP requests.
 package limit
 
 import (
+	"errors"
 	"net/http"
 	"sync"
 )
@@ -26,6 +27,9 @@ type Transport struct {
 	// The transport used to perform requests.
 	// If nil, http.DefaultTransport is used.
 	Transport http.RoundTripper
+
+	cmu      sync.Mutex // protects the following
+	canceler map[*http.Request]func()
 }
 
 func (t *Transport) transport() http.RoundTripper {
@@ -38,20 +42,58 @@ func (t *Transport) transport() http.RoundTripper {
 // RoundTrip satisfies http.RoundTripper.
 func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	l := t.Locker(r)
-	l.Lock()
+
+	ready := make(chan struct{})
+	cancel := make(chan struct{})
+	t.setCanceler(r, func() { close(cancel) })
+	go func() {
+		l.Lock()
+		select {
+		case ready <- struct{}{}:
+		case <-cancel:
+			l.Unlock()
+		}
+	}()
+	select {
+	case <-ready:
+		t.setCanceler(r, nil)
+	case <-cancel:
+		return nil, errors.New("canceled")
+	}
+
 	defer l.Unlock()
 	return t.transport().RoundTrip(r)
 }
 
-// CancelRequest calls CancelRequest on the underlying
-// RoundTripper if possible.
+// CancelRequest cancels a request r
+// by abandoning it if it is still waiting to execute,
+// and by calling CancelRequest
+// on the underlying RoundTripper.
 func (t *Transport) CancelRequest(r *http.Request) {
+	cancel := t.setCanceler(r, nil)
+	cancel()
 	type canceler interface {
 		CancelRequest(*http.Request)
 	}
 	if c, ok := t.transport().(canceler); ok {
 		c.CancelRequest(r)
 	}
+}
+
+// returns the old canceler
+func (t *Transport) setCanceler(r *http.Request, f func()) func() {
+	t.cmu.Lock()
+	defer t.cmu.Unlock()
+	if t.canceler == nil {
+		t.canceler = make(map[*http.Request]func())
+	}
+	old := t.canceler[r]
+	if f != nil {
+		t.canceler[r] = f
+	} else {
+		delete(t.canceler, r)
+	}
+	return old
 }
 
 // NewTransportByHost returns a Transport that limits

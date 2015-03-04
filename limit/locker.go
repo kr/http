@@ -5,6 +5,16 @@ import (
 	"sync"
 )
 
+// By returns a function that produces Lockers.
+// The returned function uses f to map each request
+// to a key value. For each distinct key value,
+// it produces a Locker that acts as a counting semaphore,
+// allowing n concurrent holders of the lock.
+func By(f func(*http.Request) interface{}, n int) func(*http.Request) sync.Locker {
+	t := &tab{f: f, n: n, m: map[interface{}]*sem{}}
+	return t.locker
+}
+
 type tab struct {
 	n int
 	f func(*http.Request) interface{}

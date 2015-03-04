@@ -59,18 +59,17 @@ func (t *Transport) CancelRequest(r *http.Request) {
 // It uses field Host from the request URL,
 // not from the Request struct itself.
 func NewTransportByHost(maxReqsPerHost int) *Transport {
-	t := &tab{n: maxReqsPerHost, f: func(r *http.Request) interface{} {
+	host := func(r *http.Request) interface{} {
 		return r.URL.Host
-	}}
-	return &Transport{Locker: t.locker}
+	}
+	return &Transport{Locker: By(host, maxReqsPerHost)}
 }
 
 // NewTransport returns a Transport that limits
 // the number of concurrent requests.
 func NewTransport(maxReqs int) *Transport {
-	t := &tab{n: maxReqs, f: func(r *http.Request) interface{} {
-		type globalKey struct{}
-		return globalKey{}
-	}}
-	return &Transport{Locker: t.locker}
+	global := func(r *http.Request) interface{} {
+		return 0
+	}
+	return &Transport{Locker: By(global, maxReqs)}
 }

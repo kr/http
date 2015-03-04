@@ -29,7 +29,7 @@ func (t *tab) locker(r *http.Request) sync.Locker {
 	k := t.f(r)
 	s := t.m[k]
 	if s == nil {
-		s = &sem{k: k, v: t.n}
+		s = &sem{k: k, v: t.n, t: t}
 		s.c.L = &s.m
 		t.m[k] = s
 	}

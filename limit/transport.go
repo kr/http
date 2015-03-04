@@ -1,7 +1,7 @@
 /*
 
 Package limit provides an http RoundTripper for limiting
-the concurrency of outbound HTTP requests.
+the concurrency of client HTTP requests.
 
 */
 package limit
@@ -12,13 +12,15 @@ import (
 )
 
 // Transport provides an http RoundTripper to limit the
-// concurrency of outbound requests according to arbitray criteria
-// depending on information in the Request.
+// concurrency of client requests according to arbitrary criteria
+// that can depend on information in the Request.
 type Transport struct {
 	// The locker returned by Locker will be locked
 	// for the duration of each request, from before
 	// the request is sent until the response header
 	// is read.
+	// Locker must be safe to call concurrently
+	// in multiple goroutines.
 	Locker func(*http.Request) sync.Locker
 
 	// The transport used to perform requests.
@@ -54,7 +56,8 @@ func (t *Transport) CancelRequest(r *http.Request) {
 
 // NewTransportByHost returns a Transport that limits
 // the number of concurrent requests to each host.
-// It uses Host from the URL, not the Request.
+// It uses field Host from the request URL,
+// not from the Request struct itself.
 func NewTransportByHost(maxReqsPerHost int) *Transport {
 	t := &tab{n: maxReqsPerHost, f: func(r *http.Request) interface{} {
 		return r.URL.Host

@@ -1,4 +1,4 @@
-package limiting
+package limit
 
 import (
 	"net/http"

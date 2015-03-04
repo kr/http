@@ -1,10 +1,10 @@
 /*
 
-Package limiting provides an http RoundTripper for limiting
+Package limit provides an http RoundTripper for limiting
 the concurrency of outbound HTTP requests.
 
 */
-package limiting
+package limit
 
 import (
 	"net/http"

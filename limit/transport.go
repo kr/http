@@ -71,7 +71,9 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 // on the underlying RoundTripper.
 func (t *Transport) CancelRequest(r *http.Request) {
 	cancel := t.setCanceler(r, nil)
-	cancel()
+	if cancel != nil {
+		cancel()
+	}
 	type canceler interface {
 		CancelRequest(*http.Request)
 	}

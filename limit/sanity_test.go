@@ -5,6 +5,11 @@ import (
 	"testing"
 )
 
+func TestCancel(t *testing.T) {
+	tr := &Transport{}
+	tr.CancelRequest(new(http.Request))
+}
+
 func TestSanity(t *testing.T) {
 	f := func(r *http.Request) interface{} { return 0 }
 	tr := &Transport{
